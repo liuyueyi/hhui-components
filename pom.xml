@@ -4,11 +4,16 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.github.liueyueyi.hhui</groupId>
+    <groupId>com.github.liueyueyi.hhui.components</groupId>
     <artifactId>hhui-components</artifactId>
+    <packaging>pom</packaging>
     <version>1.0</version>
+    <modules>
+        <module>trace-watch-log</module>
+    </modules>
 
-    <name>quick-chinese-transfer</name>
+
+    <name>hhui-components</name>
     <description>
         A Java library supporting conversion between Simplified-Chinese, Traditional-Chinese
     </description>
