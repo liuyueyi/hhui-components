@@ -9,7 +9,8 @@
     <packaging>pom</packaging>
     <version>1.0</version>
     <modules>
-        <module>trace-watch-log</module>
+        <module>trace-watch-dog</module>
+        <module>trace-watch-dog-spring</module>
     </modules>
 
 

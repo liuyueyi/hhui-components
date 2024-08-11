@@ -1,12 +1,10 @@
 package com.github.liuyueyi.hhui.components.trace.mdc;
 
-import com.sun.deploy.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 /**
