@@ -10,7 +10,8 @@ hhui-components
 
 ### 1. 组件列表
 
-- [ ] [trace-watch-dog](/trace-watch-log)
+- [ ] [trace-watch-dog](/trace-watch-dog)
+  - [x] [trace-watch-dog-spring](/trace-watch-dog-spring) 基于Spring AOP提供的使用版本 
   - 执行链路耗时分布统计
 - [ ] async-run-job
   - 异步执行调度组件，像本地方法调用一样，实现线程池/MQ的异步执行
