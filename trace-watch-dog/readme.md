@@ -18,3 +18,39 @@ trace-watch-dog
 - [ ] 借助AOP，实现非侵入式的埋点
 - [ ] AOP的使用缺陷
 - [ ] 基于Agent的实现方式
+
+### 使用姿势
+
+引入依赖，基于jitpack的如下
+
+> 版本根据实际需要进行选择，当前最新版本 0.0.1 
+
+```xml
+<repositories>
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+</repositories>
+```
+
+基础核心使用，可应用非Spring应用场景
+
+```xml
+<dependency>
+    <groupId>com.github.liuyueyi.hhui-components</groupId>
+    <artifactId>trace-watch-dog</artifactId>
+    <version>0.0.1</version>
+</dependency>
+```
+
+对于SpringBoot的应用场景下，可以引入下面的依赖，支持基于AOP的埋点方式
+
+```xml
+<dependency>
+    <groupId>com.github.liuyueyi.hhui-components</groupId>
+    <artifactId>trace-watch-dog-spring</artifactId>
+    <version>0.0.1</version>
+</dependency>
+```
+

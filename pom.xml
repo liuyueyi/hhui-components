@@ -16,9 +16,9 @@
 
     <name>hhui-components</name>
     <description>
-        A Java library supporting conversion between Simplified-Chinese, Traditional-Chinese
+        Java Components for project
     </description>
-    <url>https://github.com/liuyueyi/quick-chinese-transfer</url>
+    <url>https://github.com/liuyueyi/hhui-components</url>
 
     <licenses>
         <license>
