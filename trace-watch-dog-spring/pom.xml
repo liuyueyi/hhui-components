@@ -10,17 +10,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>trace-watch-dog-spring</artifactId>
+    <version>0.0.1</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
+        <trace.watch.dog>0.0.1</trace.watch.dog>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.github.liueyueyi.hhui.components</groupId>
             <artifactId>trace-watch-dog</artifactId>
-            <version>1.0</version>
+            <version>${trace.watch.dog}</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

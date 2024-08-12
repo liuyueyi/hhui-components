@@ -8,6 +8,7 @@
         <version>1.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
+    <version>0.0.1</version>
 
     <artifactId>trace-watch-dog</artifactId>
 
