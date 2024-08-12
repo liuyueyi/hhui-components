@@ -20,7 +20,7 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.github.liueyueyi.hhui.components</groupId>
+            <groupId>com.github.liuyueyi.hhui.components</groupId>
             <artifactId>trace-watch-dog</artifactId>
             <version>${trace.watch.dog}</version>
         </dependency>

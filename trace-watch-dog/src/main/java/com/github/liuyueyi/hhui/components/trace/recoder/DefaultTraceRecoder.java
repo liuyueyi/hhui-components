@@ -5,6 +5,8 @@ import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
 import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.NOPLoggerFactory;
+import org.slf4j.helpers.NOP_FallbackServiceProvider;
 
 import java.io.Closeable;
 import java.text.NumberFormat;
@@ -136,7 +138,6 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      * @return
      */
     private Runnable runWithTime(Runnable run, String name, String msgId) {
-        log.info("开始记录 -> {}", name);
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
             MdcUtil.setGlobalMsgId(msgId);
@@ -157,7 +158,6 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      * @return 返回结果
      */
     private <T> Supplier<T> supplyWithTime(Supplier<T> call, String name, String msgId) {
-        log.info("开始记录 -> {}", name);
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
             MdcUtil.setGlobalMsgId(msgId);
@@ -214,7 +214,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         long totalCost = cost.remove(traceName);
         sb.append("TraceWatch '").append(traceName).append("': running time = ").append(totalCost).append(" ms");
         sb.append('\n');
-        if (cost.size() <= 1) {
+        if (cost.size() < 1) {
             sb.append("No task info kept");
         } else {
             sb.append("---------------------------------------------\n");
@@ -231,7 +231,12 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
             }
         }
 
-        log.info("\n---------------------\n{}\n--------------------\n", sb);
+        if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
+            // 若项目中没有Slfj4的实现，则直接使用标准输出
+            System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
+        } else if (log.isInfoEnabled()){
+            log.info("\n---------------------\n{}\n--------------------\n", sb);
+        }
         return cost;
     }
 
