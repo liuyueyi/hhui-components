@@ -10,7 +10,10 @@ import java.io.Closeable;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 
 import static com.github.liuyueyi.hhui.components.trace.TraceWatch.endTrace;
@@ -49,12 +52,17 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      */
     private volatile boolean markExecuteOver;
 
+    /**
+     * 控制是否打印日志的条件
+     */
+    private Supplier<Boolean> logCondition;
+
 
     public DefaultTraceRecoder() {
-        this(AsyncUtil.executorService, "TraceBridge");
+        this(AsyncUtil.executorService, "TraceBridge", () -> true);
     }
 
-    public DefaultTraceRecoder(ExecutorService executorService, String task) {
+    public DefaultTraceRecoder(ExecutorService executorService, String task, Supplier<Boolean> condition) {
         this.traceName = task;
         list = new CopyOnWriteArrayList<>();
         // 支持排序的耗时记录
@@ -62,6 +70,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         startRecord(task);
         this.executorService = TtlExecutors.getTtlExecutorService(executorService);
         this.markExecuteOver = false;
+        this.logCondition = condition;
     }
 
     /**
@@ -190,10 +199,14 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         }
     }
 
-    public void prettyPrint() {
+    public Map<String, Long> prettyPrint() {
         // 在格式化输出时，要求所有任务执行完毕
         if (!this.markExecuteOver) {
             this.allExecuted();
+        }
+
+        if (!logCondition.get()) {
+            return cost;
         }
 
         StringBuilder sb = new StringBuilder();
@@ -219,6 +232,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         }
 
         log.info("\n---------------------\n{}\n--------------------\n", sb);
+        return cost;
     }
 
     @Override

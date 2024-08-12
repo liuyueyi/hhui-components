@@ -7,18 +7,33 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.expression.BeanFactoryResolver;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.util.StringUtils;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
+import java.util.function.Supplier;
 
 /**
  * @author YiHui
  * @date 2024/8/11
  */
 @Aspect
-public class TraceAspect {
+public class TraceAspect implements ApplicationContextAware {
+
+    private ExpressionParser parser;
+    private ApplicationContext applicationContext;
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.parser = new SpelExpressionParser();
+        this.applicationContext = applicationContext;
+    }
 
     @Around("@annotation(traceDog)")
     public Object handle(ProceedingJoinPoint joinPoint, TraceDog traceDog) throws Throwable {
@@ -29,7 +44,7 @@ public class TraceAspect {
         MethodSignature methodSignature = ((MethodSignature) joinPoint.getSignature());
         if (traceDog.propagation() == Propagation.REQUIRED && TraceWatch.getRecoder() == null) {
             // 开启trace链接记录
-            try (DefaultTraceRecoder recoder = TraceWatch.startTrace(genTraceName(methodSignature, traceDog))) {
+            try (DefaultTraceRecoder traceRecoder = TraceWatch.startTrace(genTraceName(methodSignature, traceDog), buildLogCondition(joinPoint, traceDog))) {
                 return executed(joinPoint);
             }
         }
@@ -52,6 +67,29 @@ public class TraceAspect {
         } else {
             return recoder.sync(() -> executed(joinPoint), genTraceName(methodSignature, traceDog));
         }
+    }
+
+
+    private Supplier<Boolean> buildLogCondition(ProceedingJoinPoint joinPoint, TraceDog dog) {
+        if (!dog.logEnable()) {
+            return () -> false;
+        }
+
+        if (StringUtils.isEmpty(dog.logSpEL())) {
+            return () -> true;
+        }
+
+        StandardEvaluationContext context = new StandardEvaluationContext();
+        context.setBeanResolver(new BeanFactoryResolver(applicationContext));
+
+        // 超时，使用自定义的返回策略进行返回
+        MethodSignature methodSignature = ((MethodSignature) joinPoint.getSignature());
+        String[] parameterNames = methodSignature.getParameterNames();
+        Object[] args = joinPoint.getArgs();
+        for (int i = 0; i < parameterNames.length; i++) {
+            context.setVariable(parameterNames[i], args[i]);
+        }
+        return () -> (Boolean) parser.parseExpression(dog.logSpEL()).getValue(context);
     }
 
     private String genTraceName(MethodSignature methodSignature, TraceDog traceDog) {

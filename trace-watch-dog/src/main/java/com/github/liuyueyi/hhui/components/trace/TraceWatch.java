@@ -7,6 +7,7 @@ import com.github.liuyueyi.hhui.components.trace.recoder.ITraceRecoder;
 import com.github.liuyueyi.hhui.components.trace.recoder.SyncTraceRecoder;
 
 import java.util.concurrent.ExecutorService;
+import java.util.function.Supplier;
 
 /**
  * 执行链路观察工具类
@@ -20,7 +21,11 @@ public class TraceWatch {
 
 
     public static DefaultTraceRecoder startTrace(String name) {
-        return startTrace(AsyncUtil.executorService, name);
+        return startTrace(name, () -> true);
+    }
+
+    public static DefaultTraceRecoder startTrace(String name, Supplier<Boolean> condition) {
+        return startTrace(AsyncUtil.executorService, name, condition);
     }
 
     /**
@@ -30,8 +35,8 @@ public class TraceWatch {
      * @param name            任务名
      * @return
      */
-    public static DefaultTraceRecoder startTrace(ExecutorService executorService, String name) {
-        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name);
+    public static DefaultTraceRecoder startTrace(ExecutorService executorService, String name, Supplier<Boolean> condition) {
+        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name, condition);
         THREAD_LOCAL.set(bridge);
         return bridge;
     }

@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 public class SyncTraceRecoder implements ITraceRecoder {
     public static SyncTraceRecoder SYNC_RECODER = new SyncTraceRecoder();
 
-
     /**
      * 待返回结果的同步执行
      *

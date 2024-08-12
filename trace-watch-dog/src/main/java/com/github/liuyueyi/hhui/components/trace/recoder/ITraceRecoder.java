@@ -1,5 +1,7 @@
 package com.github.liuyueyi.hhui.components.trace.recoder;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -55,5 +57,14 @@ public interface ITraceRecoder {
      */
     default ITraceRecoder allExecuted() {
         return this;
+    }
+
+    /**
+     * 日志打印
+     *
+     * @return 各任务耗时情况
+     */
+    default Map<String, Long> prettyPrint() {
+        return Collections.emptyMap();
     }
 }

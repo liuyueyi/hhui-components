@@ -1,6 +1,10 @@
 package com.github.liuyueyi.hui.components.trace.aop;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * @author YiHui
@@ -33,4 +37,13 @@ public @interface TraceDog {
      */
     boolean async() default false;
 
+    /**
+     * 是否打印日志 与 logSpeEL 配合使用
+     *
+     * @return true 可打印日志
+     */
+    boolean logEnable() default true;
+
+
+    String logSpEL() default "";
 }
