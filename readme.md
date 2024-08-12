@@ -1,6 +1,8 @@
 hhui-components
 ---
 
+[![](https://jitpack.io/v/liuyueyi/hhui-components.svg)](https://jitpack.io/#liuyueyi/hhui-components)
+
 从0到1，带你实现一些实用性非常强的组件
 
 技术栈: java + spring + springboot
@@ -10,7 +12,7 @@ hhui-components
 
 ### 1. 组件列表
 
-- [ ] [trace-watch-dog](/trace-watch-dog)
+- [x] [trace-watch-dog](/trace-watch-dog)
   - [x] [trace-watch-dog-spring](/trace-watch-dog-spring) 基于Spring AOP提供的使用版本 
   - 执行链路耗时分布统计
 - [ ] async-run-job
