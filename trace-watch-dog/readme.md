@@ -10,7 +10,7 @@ trace-watch-dog
 
 ### 系列教程
 
-- [ ] trace-watch-dog 诞生的契机
+- [x] [trace-watch-dog 诞生的契机]()
 - [ ] 如何实现一个基础版本的耗时监控工具类
 - [ ] 便捷的同步转异步的实现策略
 - [ ] 解决异步的上下文信息丢失问题（如traceId）
