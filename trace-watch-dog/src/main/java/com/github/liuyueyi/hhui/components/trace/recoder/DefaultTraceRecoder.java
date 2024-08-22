@@ -6,7 +6,6 @@ import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLoggerFactory;
-import org.slf4j.helpers.NOP_FallbackServiceProvider;
 
 import java.io.Closeable;
 import java.text.NumberFormat;
@@ -187,6 +186,13 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
     }
 
     private void startRecord(String name) {
+        if (markExecuteOver) {
+            // 所有任务执行完毕，不再新增
+            if (log.isDebugEnabled()) {
+                log.debug("allTask ExecuteOver ignore: {}", name);
+            }
+            return;
+        }
         cost.put(name, System.currentTimeMillis());
     }
 
@@ -214,7 +220,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         long totalCost = cost.remove(traceName);
         sb.append("TraceWatch '").append(traceName).append("': running time = ").append(totalCost).append(" ms");
         sb.append('\n');
-        if (cost.size() < 1) {
+        if (cost.isEmpty()) {
             sb.append("No task info kept");
         } else {
             sb.append("---------------------------------------------\n");
@@ -234,7 +240,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
             // 若项目中没有Slfj4的实现，则直接使用标准输出
             System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
-        } else if (log.isInfoEnabled()){
+        } else if (log.isInfoEnabled()) {
             log.info("\n---------------------\n{}\n--------------------\n", sb);
         }
         return cost;
