@@ -15,7 +15,14 @@ import java.util.function.Supplier;
  */
 public class MdcUtil {
     private static final Logger log = LoggerFactory.getLogger(MdcUtil.class);
+    /**
+     * 生成msgId的方法
+     */
     public static Supplier<String> genIdFunc = null;
+
+    /**
+     * 获取MDC上下文中持有msgId的tagKey
+     */
     public static Supplier<String> idTagGet = null;
 
     public static void registerFunc(Supplier<String> genIdFunc, Supplier<String> idTagGet) {

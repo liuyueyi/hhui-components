@@ -60,7 +60,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
 
 
     public DefaultTraceRecoder() {
-        this(AsyncUtil.executorService, "TraceBridge", () -> true);
+        this(AsyncUtil.executorService, "TraceDog", () -> true);
     }
 
     public DefaultTraceRecoder(ExecutorService executorService, String task, Supplier<Boolean> condition) {
@@ -68,7 +68,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         list = new CopyOnWriteArrayList<>();
         // 支持排序的耗时记录
         cost = new ConcurrentSkipListMap<>();
-        startRecord(task);
+        start(task);
         this.executorService = TtlExecutors.getTtlExecutorService(executorService);
         this.markExecuteOver = false;
         this.logCondition = condition;
@@ -140,11 +140,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
             MdcUtil.setGlobalMsgId(msgId);
-            startRecord(name);
+            start(name);
             try {
                 run.run();
             } finally {
-                endRecord(name);
+                end(name);
             }
         };
     }
@@ -160,11 +160,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
             MdcUtil.setGlobalMsgId(msgId);
-            startRecord(name);
+            start(name);
             try {
                 return call.get();
             } finally {
-                endRecord(name);
+                end(name);
             }
         };
     }
@@ -180,12 +180,12 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
             CompletableFuture.allOf(list.toArray(new CompletableFuture[]{})).join();
         }
         // 记录整体结束
-        endRecord(this.traceName);
+        end(this.traceName);
         this.markExecuteOver = true;
         return this;
     }
 
-    private void startRecord(String name) {
+    private void start(String name) {
         if (markExecuteOver) {
             // 所有任务执行完毕，不再新增
             if (log.isDebugEnabled()) {
@@ -196,7 +196,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         cost.put(name, System.currentTimeMillis());
     }
 
-    private void endRecord(String name) {
+    private void end(String name) {
         long now = System.currentTimeMillis();
         long last = cost.getOrDefault(name, now);
         if (last >= now / 1000) {
