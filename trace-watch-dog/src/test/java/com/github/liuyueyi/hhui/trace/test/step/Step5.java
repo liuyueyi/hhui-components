@@ -1,7 +1,8 @@
 package com.github.liuyueyi.hhui.trace.test.step;
 
-import com.alibaba.ttl.threadpool.TtlExecutors;
+import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.Closeable;
@@ -13,6 +14,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 /**
@@ -57,7 +60,7 @@ public class Step5 {
             // 支持排序的耗时记录
             cost = new ConcurrentSkipListMap<>();
             start(task);
-            this.executorService = TtlExecutors.getTtlExecutorService(executorService);
+            this.executorService = executorService;
             this.markExecuteOver = false;
         }
 
@@ -209,7 +212,7 @@ public class Step5 {
                 }
             }
 
-            System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
+            // System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
             return cost;
         }
 
@@ -254,6 +257,14 @@ public class Step5 {
     }
 
     @Test
+    public void testCost4() {
+        for (int i = 0; i < 10; i++) {
+            testCost();
+        }
+    }
+
+
+    @Test
     public void testCost() {
         try (TraceRecorder recorder = new TraceRecorder()) {
             randSleep("前置", 20);
@@ -265,10 +276,132 @@ public class Step5 {
         }
     }
 
-    @Test
-    public void testCost4() {
-        for (int i = 0; i < 10; i++) {
-            testCost();
+    private void sleep(int max) {
+        try {
+            Thread.sleep(random.nextInt(max));
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
+
+    private ThreadLocal<String> local = new InheritableThreadLocal<>();
+
+    @Test
+    public void testConcurrent() throws InterruptedException {
+        // 外部链路执行线程池
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+        // TraceRecoder的异步线程池
+        ExecutorService traceExecutors = Executors.newFixedThreadPool(2);
+
+        executorService.submit(() -> {
+            local.set("t1");
+            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t1")) {
+                recorder.async(() -> {
+                    sleep(10);
+                    System.out.println("1-1 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "1-1");
+                recorder.async(() -> {
+                    sleep(10);
+                    System.out.println("1-2 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "1-2");
+                recorder.async(() -> {
+                    sleep(100);
+                    System.out.println("1-3 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "1-3");
+                recorder.sync(() -> sleep(200), "1-4同步");
+            } finally {
+                local.remove();
+            }
+        });
+        executorService.submit(() -> {
+            local.set("t2");
+            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t2")) {
+                recorder.async(() -> {
+                    sleep(100);
+                    System.out.println("2-1 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "2-1");
+                recorder.async(() -> {
+                    sleep(100);
+                    System.out.println("2-2 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "2-2");
+                recorder.async(() -> {
+                    sleep(100);
+                    System.out.println("2-3 上下文:" + Thread.currentThread().getName() + "_" + local.get());
+                }, "2-3");
+
+                recorder.sync(() -> sleep(200), "2-4同步");
+            } finally {
+                local.remove();
+            }
+        });
+
+        Thread.sleep(3000);
+    }
+
+
+    private ThreadLocal<String> transLocal = new TransmittableThreadLocal<>();
+
+    private boolean testConcurrentV2() throws InterruptedException {
+        // 外部链路执行线程池
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+        // TraceRecoder的异步线程池
+        ExecutorService traceExecutors = AsyncUtil.initExecutorService(2, 2);
+
+        Future f1 = executorService.submit(() -> {
+            local.set("t1");
+            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t1")) {
+                recorder.async(() -> {
+                    sleep(10);
+                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
+                }, "1-1");
+                recorder.async(() -> {
+                    sleep(10);
+                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
+                }, "1-2");
+                recorder.async(() -> {
+                    sleep(100);
+                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
+                }, "1-3");
+                recorder.sync(() -> sleep(200), "1-4同步");
+            } finally {
+                local.remove();
+            }
+        });
+        Future f2 = executorService.submit(() -> {
+            local.set("t2");
+            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t2")) {
+                recorder.async(() -> {
+                    sleep(100);
+                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
+                }, "2-1");
+                recorder.async(() -> {
+                    sleep(100);
+                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
+                }, "2-2");
+                recorder.async(() -> {
+                    sleep(100);
+                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
+                }, "2-3");
+
+                recorder.sync(() -> sleep(200), "2-4同步");
+            } finally {
+                local.remove();
+            }
+        });
+
+        Thread.sleep(1000);
+        return true;
+    }
+
+    @Test
+    public void testCon() throws InterruptedException {
+        for (int i = 0; i < 100; i++) {
+            testConcurrentV2();
+        }
+        System.out.println("全部通过!");
+        Thread.sleep(3000);
+    }
+
 }

@@ -10,10 +10,10 @@ trace-watch-dog
 
 ### 系列教程
 
-- [x] [trace-watch-dog 诞生的契机]()
-- [x] [封装一个基础的耗时统计工具类]()
-- [x] [从0到1封装一个通用的耗时统计工具类]()
-- [x] [便捷的同步转异步的实现策略]()
+- [x] [trace-watch-dog 诞生的契机 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/01.%E8%AF%9E%E7%94%9F%E7%9A%84%E5%A5%91%E6%9C%BA.html) 
+- [x] [封装一个基础的耗时统计工具类 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/02.%E5%9F%BA%E7%A1%80%E8%80%97%E6%97%B6%E5%B7%A5%E5%85%B7%E5%B0%81%E8%A3%85.html)
+- [x] [从0到1封装一个通用的耗时统计工具类 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/03.%E5%B0%81%E8%A3%85%E4%B8%80%E4%B8%AA%E9%80%9A%E7%94%A8%E7%9A%84%E8%80%97%E6%97%B6%E5%88%86%E5%B8%83%E5%B7%A5%E5%85%B7%E7%B1%BB.html)
+- [x] [异步耗时统计能力增强的实现策略 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/04.%E5%BC%82%E6%AD%A5%E6%94%AF%E6%8C%81%E7%AD%96%E7%95%A5.html)
 - [ ] 解决异步的上下文信息丢失问题（如traceId）
 - [ ] 借助上下文，支持随时使用
 - [ ] 借助AOP，实现非侵入式的埋点
