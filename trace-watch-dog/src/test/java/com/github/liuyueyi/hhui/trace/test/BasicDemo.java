@@ -1,13 +1,14 @@
 package com.github.liuyueyi.hhui.trace.test;
 
 import com.github.liuyueyi.hhui.components.trace.TraceWatch;
+import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import com.github.liuyueyi.hhui.components.trace.recoder.DefaultTraceRecoder;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.ServerSocket;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiConsumer;
 
 /**
  * 基本使用示例
@@ -16,6 +17,7 @@ import java.util.function.BiConsumer;
  * @date 2024/8/12
  */
 public class BasicDemo {
+    private static final Logger log = LoggerFactory.getLogger(BasicDemo.class);
     private static Random random = new Random();
 
     /**
@@ -35,14 +37,14 @@ public class BasicDemo {
     private String fun1WithReturn() {
         long start = System.currentTimeMillis();
         randSleep(50);
-        System.out.println("fun1WithReturn执行完毕 -> " + (System.currentTimeMillis() - start));
+        log.info("fun1WithReturn执行完毕 -> " + (System.currentTimeMillis() - start));
         return "fun1";
     }
 
     private void fun2NoReturn(String txt) {
         long start = System.currentTimeMillis();
         randSleep(50);
-        System.out.println("fun2 -->" + txt + " --> " +  (System.currentTimeMillis() - start));
+        log.info("fun2 -->" + txt + " --> " + (System.currentTimeMillis() - start));
     }
 
 
@@ -54,20 +56,20 @@ public class BasicDemo {
     private void runAsyncNoReturn(String ans) {
         long start = System.currentTimeMillis();
         randSleep(15);
-        System.out.println("runAsyncNoReturn ->" + ans + " --> " +  (System.currentTimeMillis() - start) );
+        log.info("runAsyncNoReturn ->" + ans + " --> " + (System.currentTimeMillis() - start));
     }
 
     private String runAsyncWithReturn(String ans) {
         long start = System.currentTimeMillis();
         randSleep(15);
-        System.out.println("runAsyncWithReturn ->" + ans + " --> " +  (System.currentTimeMillis() - start));
+        log.info("runAsyncWithReturn ->" + ans + " --> " + (System.currentTimeMillis() - start));
         return ans + "_over";
     }
 
     private String runAsyncWithReturn2(String ans) {
         long start = System.currentTimeMillis();
         randSleep(25);
-        System.out.println("runAsyncWithReturn2 ->" + ans + " --> " +  (System.currentTimeMillis() - start));
+        log.info("runAsyncWithReturn2 ->" + ans + " --> " + (System.currentTimeMillis() - start));
         return ans + "_over2";
     }
 
@@ -81,9 +83,9 @@ public class BasicDemo {
         runAsyncNoReturn(ans);
         String a2 = runAsyncWithReturn(ans);
         String a3 = runAsyncWithReturn2(ans);
-        System.out.println("最终的结果是: -> " + (a2 + a3));
+        log.info("最终的结果是: -> " + (a2 + a3));
         long end = System.currentTimeMillis();
-        System.out.println("总耗时： " + (end - start));
+        log.info("总耗时： " + (end - start));
     }
 
     /**
@@ -91,10 +93,12 @@ public class BasicDemo {
      */
     private void preLoad() {
         // 这里的执行，主要是为了解决 TraceWatch等相关类的初始化耗时对整体结果的影响
-        try(DefaultTraceRecoder recoder = TraceWatch.startTrace("预热", () -> false)) {
-            recoder.sync(() -> { randSleep(20); }, "2");
+        try (DefaultTraceRecoder recoder = TraceWatch.startTrace("预热", () -> false)) {
+            recoder.sync(() -> {
+                randSleep(20);
+            }, "2");
         } finally {
-            System.out.println("========================= 预热 ========================= \n\n");
+            log.info("========================= 预热 ========================= \n\n");
         }
     }
 
@@ -107,17 +111,17 @@ public class BasicDemo {
         preLoad();
         long start = System.currentTimeMillis();
         try (DefaultTraceRecoder recoder = TraceWatch.startTrace("traceLog-全同步")) {
-            System.out.println("到这里耗时： " + (System.currentTimeMillis() - start));
+            log.info("到这里耗时： " + (System.currentTimeMillis() - start));
             String ans = recoder.sync(() -> fun1WithReturn(), "1.fun1WithReturn");
             recoder.sync(() -> fun2NoReturn(ans), "2.fun2NoReturn");
             recoder.sync(() -> runAsyncNoReturn(ans), "3.runAsyncNoReturn");
             String a2 = recoder.sync(() -> runAsyncWithReturn(ans), "4.runAsyncWithReturn");
             String a3 = recoder.sync(() -> runAsyncWithReturn2(ans), "5.runAsyncWithReturn");
-            System.out.println("最终的结果是: -> " + (a2 + a3));
-            System.out.println("结果结束耗时：" + (System.currentTimeMillis() - start));
+            log.info("最终的结果是: -> " + (a2 + a3));
+            log.info("结果结束耗时：" + (System.currentTimeMillis() - start));
         }
         long end = System.currentTimeMillis();
-        System.out.println("总耗时： " + (end - start));
+        log.info("总耗时： " + (end - start));
     }
 
 
@@ -127,6 +131,7 @@ public class BasicDemo {
     @Test
     public void testWithAsyncTrace() {
         preLoad();
+        MdcUtil.initTraceIdAutoGen(true);
         long start = System.currentTimeMillis();
         try (DefaultTraceRecoder recoder = TraceWatch.startTrace("traceLog")) {
             String ans = recoder.sync(() -> fun1WithReturn(), "1.fun1WithReturn");
@@ -136,10 +141,10 @@ public class BasicDemo {
             // 下面两个演示的是异步返回的场景，在合适的地方，将异步返回结果进行拼接
             CompletableFuture<String> a2 = recoder.async(() -> runAsyncWithReturn(ans), "4.runAsyncWithReturn");
             CompletableFuture<String> a3 = recoder.async(() -> runAsyncWithReturn2(ans), "5.runAsyncWithReturn");
-            System.out.println("异步结果阻塞获取前耗时：" + (System.currentTimeMillis() - start));
-            CompletableFuture.allOf(a2, a3).whenComplete((unused, throwable) -> System.out.println("最终的结果是: -> " + (a2.join() + a3.join())));
+            log.info("异步结果阻塞获取前耗时：" + (System.currentTimeMillis() - start));
+            CompletableFuture.allOf(a2, a3).whenComplete((unused, throwable) -> log.info("最终的结果是: -> " + (a2.join() + a3.join())));
         }
         long end = System.currentTimeMillis();
-        System.out.println("总耗时： " + (end - start));
+        log.info("总耗时： " + (end - start));
     }
 }

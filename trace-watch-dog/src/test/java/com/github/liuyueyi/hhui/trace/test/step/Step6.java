@@ -2,8 +2,12 @@ package com.github.liuyueyi.hhui.trace.test.step;
 
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
+import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.helpers.NOPLoggerFactory;
 
 import java.io.Closeable;
 import java.text.NumberFormat;
@@ -22,8 +26,11 @@ import java.util.function.Supplier;
  * @author YiHui
  * @date 2024/8/22
  */
-public class Step5 {
-    public static class TraceRecorder implements Closeable {
+public class Step6 {
+    private static final Logger log = LoggerFactory.getLogger(Step6.class);
+
+    public static class TraceRecoder implements Closeable {
+        private static final Logger log = LoggerFactory.getLogger(TraceRecoder.class);
         /**
          * trace记录名
          */
@@ -50,11 +57,11 @@ public class Step5 {
         private volatile boolean markExecuteOver;
 
 
-        public TraceRecorder() {
+        public TraceRecoder() {
             this(AsyncUtil.executorService, "TraceDog");
         }
 
-        public TraceRecorder(ExecutorService executorService, String task) {
+        public TraceRecoder(ExecutorService executorService, String task) {
             this.traceName = task;
             list = new CopyOnWriteArrayList<>();
             // 支持排序的耗时记录
@@ -62,6 +69,7 @@ public class Step5 {
             start(task);
             this.executorService = executorService;
             this.markExecuteOver = false;
+            MdcUtil.setGlobalTraceId(MdcUtil.fetchGlobalMsgIdForTraceRecoder());
         }
 
         /**
@@ -123,7 +131,9 @@ public class Step5 {
          * @return
          */
         private Runnable runWithTime(Runnable run, String name) {
+            String traceId = MdcUtil.fetchGlobalMsgIdForTraceRecoder();
             return () -> {
+                MdcUtil.setGlobalTraceId(traceId);
                 start(name);
                 try {
                     run.run();
@@ -141,7 +151,9 @@ public class Step5 {
          * @return 返回结果
          */
         private <T> Supplier<T> supplyWithTime(Supplier<T> call, String name) {
+            String traceId = MdcUtil.fetchGlobalMsgIdForTraceRecoder();
             return () -> {
+                MdcUtil.setGlobalTraceId(traceId);
                 start(name);
                 try {
                     return call.get();
@@ -156,7 +168,7 @@ public class Step5 {
          *
          * @return
          */
-        public TraceRecorder allExecuted() {
+        public TraceRecoder allExecuted() {
             if (!list.isEmpty()) {
                 CompletableFuture.allOf(list.toArray(new CompletableFuture[]{})).join();
             }
@@ -212,7 +224,12 @@ public class Step5 {
                 }
             }
 
-            System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
+            if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
+                // 若项目中没有Slfj4的实现，则直接使用标准输出
+                System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
+            } else if (log.isInfoEnabled()) {
+                log.info("\n---------------------\n{}\n--------------------\n", sb);
+            }
             return cost;
         }
 
@@ -246,162 +263,38 @@ public class Step5 {
     }
 
     @Test
+    public void testCost1() {
+        MdcUtil.setGlobalTraceId("666-666");
+        try (TraceRecoder recorder = new TraceRecoder()) {
+            randSleep("前置", 20);
+            int ans = recorder.sync(() -> {
+                int r = randSleepAndRes("task1", 200);
+                log.info("task1 内部执行 --> {}", r);
+                return r;
+            }, "task1");
+            recorder.async(() -> {
+                int r = randSleepAndRes("task2", 100);
+                log.info("task2 异步执行 --->{}", r);
+            }, "task2");
+            recorder.sync(() -> randSleep("task3", 40), "task3");
+        }
+    }
+
+    @Test
     public void testCost2() {
-        try (TraceRecorder recorder = new TraceRecorder()) {
+        MdcUtil.initTraceIdAutoGen(true);
+        try (TraceRecoder recorder = new TraceRecoder()) {
             randSleep("前置", 20);
-            recorder.sync(() -> randSleep("task1", 200), "task1");
-            recorder.async(() -> randSleep("task2", 100), "task2");
+            int ans = recorder.sync(() -> {
+                int r = randSleepAndRes("task1", 200);
+                log.info("task1 内部执行 --> {}", r);
+                return r;
+            }, "task1");
+            recorder.async(() -> {
+                int r = randSleepAndRes("task2", 100);
+                log.info("task2 异步执行 --->{}", r);
+            }, "task2");
             recorder.sync(() -> randSleep("task3", 40), "task3");
-            recorder.async(() -> randSleep("task4", 100), "task4");
         }
     }
-
-    @Test
-    public void testCost4() {
-        for (int i = 0; i < 10; i++) {
-            testCost();
-        }
-    }
-
-
-    @Test
-    public void testCost() {
-        try (TraceRecorder recorder = new TraceRecorder()) {
-            randSleep("前置", 20);
-            int f1 = recorder.sync(() -> randSleepAndRes("task1", 200), "task1");
-            CompletableFuture<Integer> f2 = recorder.async(() -> randSleepAndRes("task2", f1), "task2");
-            recorder.sync(() -> randSleep("task3", 40), "task3");
-            recorder.async(() -> randSleep("task4", 100), "task4");
-            System.out.println("打印f2的结果 -> " + f2.join());
-        }
-    }
-
-    private void sleep(int max) {
-        try {
-            Thread.sleep(random.nextInt(max));
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private ThreadLocal<String> local = new InheritableThreadLocal<>();
-
-    @Test
-    public void testConcurrent() throws InterruptedException {
-        // 外部链路执行线程池
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-
-        // TraceRecoder的异步线程池
-        ExecutorService traceExecutors = Executors.newFixedThreadPool(2);
-
-        executorService.submit(() -> {
-            local.set("t1");
-            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t1")) {
-                recorder.async(() -> {
-                    sleep(10);
-                    System.out.println("1-1 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "1-1");
-                recorder.async(() -> {
-                    sleep(10);
-                    System.out.println("1-2 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "1-2");
-                recorder.async(() -> {
-                    sleep(100);
-                    System.out.println("1-3 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "1-3");
-                recorder.sync(() -> sleep(200), "1-4同步");
-            } finally {
-                local.remove();
-            }
-        });
-        executorService.submit(() -> {
-            local.set("t2");
-            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t2")) {
-                recorder.async(() -> {
-                    sleep(100);
-                    System.out.println("2-1 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "2-1");
-                recorder.async(() -> {
-                    sleep(100);
-                    System.out.println("2-2 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "2-2");
-                recorder.async(() -> {
-                    sleep(100);
-                    System.out.println("2-3 上下文:" + Thread.currentThread().getName() + "_" + local.get());
-                }, "2-3");
-
-                recorder.sync(() -> sleep(200), "2-4同步");
-            } finally {
-                local.remove();
-            }
-        });
-
-        Thread.sleep(3000);
-    }
-
-
-    private ThreadLocal<String> transLocal = new TransmittableThreadLocal<>();
-
-    private boolean testConcurrentV2() throws InterruptedException {
-        // 外部链路执行线程池
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-
-        // TraceRecoder的异步线程池
-        ExecutorService traceExecutors = AsyncUtil.initExecutorService(2, 2);
-
-        Future f1 = executorService.submit(() -> {
-            local.set("t1");
-            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t1")) {
-                recorder.async(() -> {
-                    sleep(10);
-                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
-                }, "1-1");
-                recorder.async(() -> {
-                    sleep(10);
-                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
-                }, "1-2");
-                recorder.async(() -> {
-                    sleep(100);
-                    Assert.assertTrue("t1上下文获取异常", "t1".equals(local.get()));
-                }, "1-3");
-                recorder.sync(() -> sleep(200), "1-4同步");
-            } finally {
-                local.remove();
-            }
-        });
-        Future f2 = executorService.submit(() -> {
-            local.set("t2");
-            try (TraceRecorder recorder = new TraceRecorder(traceExecutors, "t2")) {
-                recorder.async(() -> {
-                    sleep(100);
-                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
-                }, "2-1");
-                recorder.async(() -> {
-                    sleep(100);
-                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
-                }, "2-2");
-                recorder.async(() -> {
-                    sleep(100);
-                    Assert.assertTrue("t2上下文获取异常", "t2".equals(local.get()));
-                }, "2-3");
-
-                recorder.sync(() -> sleep(200), "2-4同步");
-            } finally {
-                local.remove();
-            }
-        });
-
-        Thread.sleep(1000);
-        return true;
-    }
-
-    @Test
-    public void testCon() throws InterruptedException {
-        for (int i = 0; i < 100; i++) {
-            testConcurrentV2();
-        }
-        System.out.println("全部通过!");
-        Thread.sleep(3000);
-    }
-
 }

@@ -58,7 +58,6 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      */
     private Supplier<Boolean> logCondition;
 
-
     public DefaultTraceRecoder() {
         this(AsyncUtil.executorService, "TraceDog", () -> true);
     }
@@ -68,10 +67,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         list = new CopyOnWriteArrayList<>();
         // 支持排序的耗时记录
         cost = new ConcurrentSkipListMap<>();
-        start(task);
         this.executorService = TtlExecutors.getTtlExecutorService(executorService);
         this.markExecuteOver = false;
         this.logCondition = condition;
+        start(task);
+        MdcUtil.setGlobalTraceId(MdcUtil.fetchGlobalMsgIdForTraceRecoder());
     }
 
     /**
@@ -79,11 +79,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      *
      * @param supplier 执行任务
      * @param name     耗时标识
-     * @return
+     * @return 异步执行返回结果
      */
     @Override
     public <T> CompletableFuture<T> async(Supplier<T> supplier, String name) {
-        CompletableFuture<T> ans = CompletableFuture.supplyAsync(supplyWithTime(supplier, name + "(异步)", MdcUtil.getOrInitGlobalMsgId()), this.executorService);
+        CompletableFuture<T> ans = CompletableFuture.supplyAsync(supplyWithTime(supplier, name + "(异步)"), this.executorService);
         list.add(ans);
         return ans;
     }
@@ -98,7 +98,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      */
     @Override
     public <T> T sync(Supplier<T> supplier, String name) {
-        return supplyWithTime(supplier, name, MdcUtil.getOrInitGlobalMsgId()).get();
+        return supplyWithTime(supplier, name).get();
     }
 
     /**
@@ -112,7 +112,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
     public CompletableFuture<Void> async(Runnable run, String name) {
         // 添加一个标识，区分同步执行与异步执行
         // 异步任务的执行，在整体的耗时占比只能作为参考
-        CompletableFuture<Void> future = CompletableFuture.runAsync(runWithTime(run, name + "(异步)", MdcUtil.getOrInitGlobalMsgId()), this.executorService);
+        CompletableFuture<Void> future = CompletableFuture.runAsync(runWithTime(run, name + "(异步)"), this.executorService);
         list.add(future);
         return future;
     }
@@ -126,7 +126,7 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      */
     @Override
     public void sync(Runnable run, String name) {
-        runWithTime(run, name, MdcUtil.getOrInitGlobalMsgId()).run();
+        runWithTime(run, name).run();
     }
 
     /**
@@ -136,10 +136,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      * @param name 任务名
      * @return
      */
-    private Runnable runWithTime(Runnable run, String name, String msgId) {
+    private Runnable runWithTime(Runnable run, String name) {
+        String traceId = MdcUtil.fetchGlobalMsgIdForTraceRecoder();
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
-            MdcUtil.setGlobalMsgId(msgId);
+            MdcUtil.setGlobalTraceId(traceId);
             start(name);
             try {
                 run.run();
@@ -156,10 +157,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      * @param name 任务名
      * @return 返回结果
      */
-    private <T> Supplier<T> supplyWithTime(Supplier<T> call, String name, String msgId) {
+    private <T> Supplier<T> supplyWithTime(Supplier<T> call, String name) {
+        String traceId = MdcUtil.fetchGlobalMsgIdForTraceRecoder();
         return () -> {
             // 将父线程的msgId设置到当前这个执行线程
-            MdcUtil.setGlobalMsgId(msgId);
+            MdcUtil.setGlobalTraceId(traceId);
             start(name);
             try {
                 return call.get();
