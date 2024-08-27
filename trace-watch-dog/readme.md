@@ -14,8 +14,9 @@ trace-watch-dog
 - [x] [封装一个基础的耗时统计工具类 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/02.%E5%9F%BA%E7%A1%80%E8%80%97%E6%97%B6%E5%B7%A5%E5%85%B7%E5%B0%81%E8%A3%85.html)
 - [x] [从0到1封装一个通用的耗时统计工具类 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/03.%E5%B0%81%E8%A3%85%E4%B8%80%E4%B8%AA%E9%80%9A%E7%94%A8%E7%9A%84%E8%80%97%E6%97%B6%E5%88%86%E5%B8%83%E5%B7%A5%E5%85%B7%E7%B1%BB.html)
 - [x] [异步耗时统计能力增强的实现策略 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/04.%E5%BC%82%E6%AD%A5%E6%94%AF%E6%8C%81%E7%AD%96%E7%95%A5.html)
-- [ ] 解决异步的上下文信息丢失问题（如traceId）
-- [ ] 借助上下文，支持随时使用
+- [x] [上下文信息传递 | 一灰灰的站点](https://hhui.top/tutorial/column/app/trace-watch-dog/05.%E4%B8%8A%E4%B8%8B%E6%96%87%E4%BF%A1%E6%81%AF%E4%BC%A0%E9%80%92.html)
+- [x] [日志集成与全链路traceId透传](https://hhui.top/tutorial/column/app/trace-watch-dog/06.%E6%97%A5%E5%BF%97%E8%BE%93%E5%87%BA%E4%B8%8E%E5%85%A8%E9%93%BE%E8%B7%AFtraceId%E9%80%8F%E4%BC%A0.html)
+- [x] [借助上下文，支持随时使用]()
 - [ ] 借助AOP，实现非侵入式的埋点
 - [ ] AOP的使用缺陷
 - [ ] 基于Agent的实现方式

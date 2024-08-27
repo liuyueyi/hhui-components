@@ -1,5 +1,6 @@
 package com.github.liuyueyi.hhui.components.trace.recoder;
 
+import java.io.Closeable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -11,7 +12,7 @@ import java.util.function.Supplier;
  * @author YiHui
  * @date 2024/8/11
  */
-public interface ITraceRecoder {
+public interface ITraceRecoder extends Closeable {
     /**
      * 待返回结果的同步执行
      *
@@ -66,5 +67,9 @@ public interface ITraceRecoder {
      */
     default Map<String, Long> prettyPrint() {
         return Collections.emptyMap();
+    }
+
+    @Override
+    default void close() {
     }
 }

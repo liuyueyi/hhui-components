@@ -44,7 +44,7 @@ public class TraceAspect implements ApplicationContextAware {
         MethodSignature methodSignature = ((MethodSignature) joinPoint.getSignature());
         if (traceDog.propagation() == Propagation.REQUIRED && TraceWatch.getRecoder() == null) {
             // 开启trace链接记录
-            try (DefaultTraceRecoder traceRecoder = TraceWatch.startTrace(genTraceName(methodSignature, traceDog), buildLogCondition(joinPoint, traceDog))) {
+            try (ITraceRecoder traceRecoder = TraceWatch.startTrace(genTraceName(methodSignature, traceDog), buildLogCondition(joinPoint, traceDog))) {
                 return executed(joinPoint);
             }
         }

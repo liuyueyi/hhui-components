@@ -62,14 +62,4 @@ public class SyncTraceRecoder implements ITraceRecoder {
         run.run();
         return CompletableFuture.completedFuture(null);
     }
-
-    /**
-     * 等待全部任务执行完毕
-     *
-     * @return 返回结果
-     */
-    @Override
-    public SyncTraceRecoder allExecuted() {
-        return this;
-    }
 }

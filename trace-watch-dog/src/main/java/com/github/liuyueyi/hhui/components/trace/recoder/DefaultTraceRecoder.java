@@ -7,17 +7,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.helpers.NOPLoggerFactory;
 
-import java.io.Closeable;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
-
-import static com.github.liuyueyi.hhui.components.trace.TraceWatch.endTrace;
 
 /**
  * 执行链路的核心记录器
@@ -25,7 +23,7 @@ import static com.github.liuyueyi.hhui.components.trace.TraceWatch.endTrace;
  * @author YiHui
  * @date 2024/8/11
  */
-public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
+public class DefaultTraceRecoder implements ITraceRecoder {
     private static final Logger log = LoggerFactory.getLogger(DefaultTraceRecoder.class);
 
     /**
@@ -57,6 +55,11 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
      * 控制是否打印日志的条件
      */
     private Supplier<Boolean> logCondition;
+
+    /**
+     * 结束的回调钩子
+     */
+    private Runnable endHook;
 
     public DefaultTraceRecoder() {
         this(AsyncUtil.executorService, "TraceDog", () -> true);
@@ -171,21 +174,6 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         };
     }
 
-    /**
-     * 等待所有的任务执行完毕
-     *
-     * @return
-     */
-    @Override
-    public DefaultTraceRecoder allExecuted() {
-        if (!list.isEmpty()) {
-            CompletableFuture.allOf(list.toArray(new CompletableFuture[]{})).join();
-        }
-        // 记录整体结束
-        end(this.traceName);
-        this.markExecuteOver = true;
-        return this;
-    }
 
     private void start(String name) {
         if (markExecuteOver) {
@@ -207,6 +195,24 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         }
     }
 
+
+    /**
+     * 等待所有的任务执行完毕
+     *
+     * @return
+     */
+    @Override
+    public DefaultTraceRecoder allExecuted() {
+        if (!list.isEmpty()) {
+            CompletableFuture.allOf(list.toArray(new CompletableFuture[]{})).join();
+        }
+        // 记录整体结束
+        end(this.traceName);
+        this.markExecuteOver = true;
+        return this;
+    }
+
+    @Override
     public Map<String, Long> prettyPrint() {
         // 在格式化输出时，要求所有任务执行完毕
         if (!this.markExecuteOver) {
@@ -256,7 +262,18 @@ public class DefaultTraceRecoder implements ITraceRecoder, Closeable {
         } catch (Exception e) {
             log.error("释放耗时上下文异常! {}", traceName, e);
         } finally {
-            endTrace();
+            Optional.ofNullable(endHook).ifPresent(Runnable::run);
         }
+    }
+
+    /**
+     * 设置结束的回调钩子
+     *
+     * @param endHook
+     * @return
+     */
+    public DefaultTraceRecoder setEndHook(Runnable endHook) {
+        this.endHook = endHook;
+        return this;
     }
 }

@@ -17,14 +17,14 @@ import java.util.function.Supplier;
  */
 public class TraceWatch {
 
-    private static final TransmittableThreadLocal<DefaultTraceRecoder> THREAD_LOCAL = new TransmittableThreadLocal<>();
+    private static final TransmittableThreadLocal<ITraceRecoder> THREAD_LOCAL = new TransmittableThreadLocal<>();
 
 
-    public static DefaultTraceRecoder startTrace(String name) {
+    public static ITraceRecoder startTrace(String name) {
         return startTrace(name, () -> true);
     }
 
-    public static DefaultTraceRecoder startTrace(String name, Supplier<Boolean> condition) {
+    public static ITraceRecoder startTrace(String name, Supplier<Boolean> condition) {
         return startTrace(AsyncUtil.executorService, name, condition);
     }
 
@@ -35,8 +35,8 @@ public class TraceWatch {
      * @param name            任务名
      * @return
      */
-    public static DefaultTraceRecoder startTrace(ExecutorService executorService, String name, Supplier<Boolean> condition) {
-        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name, condition);
+    public static ITraceRecoder startTrace(ExecutorService executorService, String name, Supplier<Boolean> condition) {
+        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name, condition).setEndHook(TraceWatch::endTrace);
         THREAD_LOCAL.set(bridge);
         return bridge;
     }
@@ -46,7 +46,7 @@ public class TraceWatch {
      *
      * @return
      */
-    public static DefaultTraceRecoder getRecoder() {
+    public static ITraceRecoder getRecoder() {
         return THREAD_LOCAL.get();
     }
 

@@ -3,7 +3,6 @@ package com.github.liuyueyi.hhui.trace.test.step;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
 import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
-import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +17,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
 /**
@@ -107,7 +104,9 @@ public class Step6 {
         public CompletableFuture<Void> async(Runnable run, String name) {
             // 添加一个标识，区分同步执行与异步执行
             // 异步任务的执行，在整体的耗时占比只能作为参考
+            long start = System.currentTimeMillis();
             CompletableFuture<Void> future = CompletableFuture.runAsync(runWithTime(run, name + "(异步)"), this.executorService);
+            System.out.println("async 耗时: " + name + " - " + (System.currentTimeMillis() - start));
             list.add(future);
             return future;
         }
@@ -131,16 +130,24 @@ public class Step6 {
          * @return
          */
         private Runnable runWithTime(Runnable run, String name) {
+            long start = System.currentTimeMillis();
             String traceId = MdcUtil.fetchGlobalMsgIdForTraceRecoder();
-            return () -> {
-                MdcUtil.setGlobalTraceId(traceId);
-                start(name);
-                try {
-                    run.run();
-                } finally {
-                    end(name);
-                }
-            };
+            long end = System.currentTimeMillis();
+            System.out.println("traceId 获取耗时: " + name + " - " + (end - start));
+            start = end;
+            try {
+                return () -> {
+                    MdcUtil.setGlobalTraceId(traceId);
+                    start(name);
+                    try {
+                        run.run();
+                    } finally {
+                        end(name);
+                    }
+                };
+            } finally {
+                System.out.println("runWithTime 耗时: " + name + " - " + (end - start));
+            }
         }
 
         /**
@@ -295,6 +302,36 @@ public class Step6 {
                 log.info("task2 异步执行 --->{}", r);
             }, "task2");
             recorder.sync(() -> randSleep("task3", 40), "task3");
+        }
+    }
+
+
+    public void subRun(String task, int max) {
+        TraceRecoder recorder = threadLocal.get();
+        recorder.async(() -> randSleep(task, max), task + "-1");
+        recorder.async(() -> randSleep(task, max), task + "-2");
+    }
+
+    public void subRun(String task, int max, TraceRecoder traceRecoder) {
+        long start = System.currentTimeMillis();
+        traceRecoder.async(() -> randSleep(task, max), task + "-1");
+        System.out.println("subRun cost: " + (System.currentTimeMillis() - start));
+        start = System.currentTimeMillis();
+        traceRecoder.async(() -> randSleep(task, max), task + "-2");
+        System.out.println("subRun cost: " + (System.currentTimeMillis() - start));
+    }
+
+    ThreadLocal<TraceRecoder> threadLocal = new TransmittableThreadLocal<>();
+
+    @Test
+    public void testCost3() {
+        try (TraceRecoder recorder = new TraceRecoder()) {
+            threadLocal.set(recorder);
+            randSleep("前置", 20);
+            recorder.sync(() -> subRun("task1", 200), "task1");
+            recorder.async(() -> randSleep("task2", 100), "task2");
+        } finally {
+            threadLocal.remove();
         }
     }
 }

@@ -3,6 +3,7 @@ package com.github.liuyueyi.hhui.trace.test;
 import com.github.liuyueyi.hhui.components.trace.TraceWatch;
 import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import com.github.liuyueyi.hhui.components.trace.recoder.DefaultTraceRecoder;
+import com.github.liuyueyi.hhui.components.trace.recoder.ITraceRecoder;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +94,7 @@ public class BasicDemo {
      */
     private void preLoad() {
         // 这里的执行，主要是为了解决 TraceWatch等相关类的初始化耗时对整体结果的影响
-        try (DefaultTraceRecoder recoder = TraceWatch.startTrace("预热", () -> false)) {
+        try (ITraceRecoder recoder = TraceWatch.startTrace("预热", () -> false)) {
             recoder.sync(() -> {
                 randSleep(20);
             }, "2");
@@ -110,7 +111,7 @@ public class BasicDemo {
     public void testWithSyncTrace() {
         preLoad();
         long start = System.currentTimeMillis();
-        try (DefaultTraceRecoder recoder = TraceWatch.startTrace("traceLog-全同步")) {
+        try (ITraceRecoder recoder = TraceWatch.startTrace("traceLog-全同步")) {
             log.info("到这里耗时： " + (System.currentTimeMillis() - start));
             String ans = recoder.sync(() -> fun1WithReturn(), "1.fun1WithReturn");
             recoder.sync(() -> fun2NoReturn(ans), "2.fun2NoReturn");
@@ -133,7 +134,7 @@ public class BasicDemo {
         preLoad();
         MdcUtil.initTraceIdAutoGen(true);
         long start = System.currentTimeMillis();
-        try (DefaultTraceRecoder recoder = TraceWatch.startTrace("traceLog")) {
+        try (ITraceRecoder recoder = TraceWatch.startTrace("traceLog")) {
             String ans = recoder.sync(() -> fun1WithReturn(), "1.fun1WithReturn");
             recoder.sync(() -> fun2NoReturn(ans), "2.fun2NoReturn");
             recoder.async(() -> runAsyncNoReturn(ans), "3.runAsyncNoReturn");
