@@ -1,7 +1,6 @@
 package com.github.liuyueyi.hui.components.trace.aop;
 
 import com.github.liuyueyi.hhui.components.trace.TraceWatch;
-import com.github.liuyueyi.hhui.components.trace.recoder.DefaultTraceRecoder;
 import com.github.liuyueyi.hhui.components.trace.recoder.ITraceRecoder;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -43,7 +42,7 @@ public class TraceAspect implements ApplicationContextAware {
 
         MethodSignature methodSignature = ((MethodSignature) joinPoint.getSignature());
         if (traceDog.propagation() == Propagation.REQUIRED && TraceWatch.getRecoder() == null) {
-            // 开启trace链接记录
+            // 入口点： 开启trace耗时记录
             try (ITraceRecoder traceRecoder = TraceWatch.startTrace(genTraceName(methodSignature, traceDog), buildLogCondition(joinPoint, traceDog))) {
                 return executed(joinPoint);
             }

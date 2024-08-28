@@ -8,11 +8,11 @@ package com.github.liuyueyi.hui.components.trace.aop;
  */
 public enum Propagation {
     /**
-     * 支持当前trace记录，如果当前不存在trace存在，则开启记录
+     * 支持当前trace记录，如果当前上下文中不存在DefaultTraceRecoder存在，则新创建一个TraceRecoder作为入口开始记录
      */
     REQUIRED(0),
     /**
-     * 支持当前trace记录，如果当前不存在trace存在，则以同步的方式执行
+     * 支持当前trace记录，如果当前上下文中不存在DefaultTraceRecoder存在，则以同步的SyncTraceRecoder方式执行，不参与耗时统计
      */
     SUPPORTS(1),
     /**
@@ -23,11 +23,11 @@ public enum Propagation {
 
     private final int value;
 
-    private Propagation(int value) {
+    Propagation(int value) {
         this.value = value;
     }
 
-    public int value() {
-        return this.value;
+    public int getValue() {
+        return value;
     }
 }
