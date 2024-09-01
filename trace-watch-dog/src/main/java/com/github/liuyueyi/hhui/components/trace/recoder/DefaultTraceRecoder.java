@@ -1,13 +1,14 @@
 package com.github.liuyueyi.hhui.components.trace.recoder;
 
 import com.alibaba.ttl.threadpool.TtlExecutors;
+import com.github.liuyueyi.hhui.components.trace.TraceWatch;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
 import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
+import com.github.liuyueyi.hhui.components.trace.output.CostOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.helpers.NOPLoggerFactory;
 
-import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,27 +55,42 @@ public class DefaultTraceRecoder implements ITraceRecoder {
     /**
      * 控制是否打印日志的条件
      */
-    private Supplier<Boolean> logCondition;
+    private boolean logEnable;
 
     /**
      * 结束的回调钩子
      */
     private Runnable endHook;
 
+    private List<CostOutput> output;
+
     public DefaultTraceRecoder() {
-        this(AsyncUtil.executorService, "TraceDog", () -> true);
+        this(AsyncUtil.executorService, "TraceDog", true);
     }
 
-    public DefaultTraceRecoder(ExecutorService executorService, String task, Supplier<Boolean> condition) {
+    public DefaultTraceRecoder(ExecutorService executorService, String task, boolean logEnable) {
         this.traceName = task;
         list = new CopyOnWriteArrayList<>();
         // 支持排序的耗时记录
         cost = new ConcurrentSkipListMap<>();
         this.executorService = TtlExecutors.getTtlExecutorService(executorService);
         this.markExecuteOver = false;
-        this.logCondition = condition;
+        this.logEnable = logEnable;
+        this.output = new ArrayList<>();
+        this.output.addAll(TraceWatch.getDefaultOutputList());
         start(task);
         MdcUtil.setGlobalTraceId(MdcUtil.fetchGlobalMsgIdForTraceRecoder());
+    }
+
+    /**
+     * 新增一个耗时定向
+     *
+     * @param costOutput
+     * @return
+     */
+    public DefaultTraceRecoder addOutput(CostOutput costOutput) {
+        output.add(costOutput);
+        return this;
     }
 
     /**
@@ -219,38 +235,12 @@ public class DefaultTraceRecoder implements ITraceRecoder {
             this.allExecuted();
         }
 
-        if (!logCondition.get()) {
+        if (!logEnable) {
             return cost;
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append('\n');
-        long totalCost = cost.remove(traceName);
-        sb.append("TraceWatch '").append(traceName).append("': running time = ").append(totalCost).append(" ms");
-        sb.append('\n');
-        if (cost.isEmpty()) {
-            sb.append("No task info kept");
-        } else {
-            sb.append("---------------------------------------------\n");
-            sb.append("ms         %     Task name\n");
-            sb.append("---------------------------------------------\n");
-            NumberFormat pf = NumberFormat.getPercentInstance();
-            pf.setMinimumIntegerDigits(2);
-            pf.setMinimumFractionDigits(2);
-            pf.setGroupingUsed(false);
-            for (Map.Entry<String, Long> entry : cost.entrySet()) {
-                sb.append(entry.getValue()).append("\t\t");
-                sb.append(pf.format(entry.getValue() / (double) totalCost)).append("\t\t");
-                sb.append(entry.getKey()).append("\n");
-            }
-        }
-
-        if (LoggerFactory.getILoggerFactory() instanceof NOPLoggerFactory) {
-            // 若项目中没有Slfj4的实现，则直接使用标准输出
-            System.out.printf("\n---------------------\n%s\n--------------------\n%n", sb);
-        } else if (log.isInfoEnabled()) {
-            log.info("\n---------------------\n{}\n--------------------\n", sb);
-        }
+        // 根据自定义规则，对耗时输出进行处理
+        output.forEach(o -> o.output(cost, traceName));
         return cost;
     }
 

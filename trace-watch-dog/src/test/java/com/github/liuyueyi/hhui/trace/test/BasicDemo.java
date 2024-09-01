@@ -94,7 +94,7 @@ public class BasicDemo {
      */
     private void preLoad() {
         // 这里的执行，主要是为了解决 TraceWatch等相关类的初始化耗时对整体结果的影响
-        try (ITraceRecoder recoder = TraceWatch.startTrace("预热", () -> false)) {
+        try (ITraceRecoder recoder = TraceWatch.startTrace("预热", false)) {
             recoder.sync(() -> {
                 randSleep(20);
             }, "2");

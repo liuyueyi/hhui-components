@@ -2,12 +2,15 @@ package com.github.liuyueyi.hhui.components.trace;
 
 import com.alibaba.ttl.TransmittableThreadLocal;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
+import com.github.liuyueyi.hhui.components.trace.output.CostOutput;
+import com.github.liuyueyi.hhui.components.trace.output.LogOutput;
 import com.github.liuyueyi.hhui.components.trace.recoder.DefaultTraceRecoder;
 import com.github.liuyueyi.hhui.components.trace.recoder.ITraceRecoder;
 import com.github.liuyueyi.hhui.components.trace.recoder.SyncTraceRecoder;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.function.Supplier;
 
 /**
  * 执行链路观察工具类
@@ -19,13 +22,37 @@ public class TraceWatch {
 
     private static final TransmittableThreadLocal<ITraceRecoder> THREAD_LOCAL = new TransmittableThreadLocal<>();
 
+    private static Set<CostOutput> defaultOutputList;
 
-    public static ITraceRecoder startTrace(String name) {
-        return startTrace(name, () -> true);
+    static {
+        defaultOutputList = new HashSet<>();
+        defaultOutputList.add(LogOutput::logPrint);
     }
 
-    public static ITraceRecoder startTrace(String name, Supplier<Boolean> condition) {
-        return startTrace(AsyncUtil.executorService, name, condition);
+    /**
+     * 注册全局的输出
+     *
+     * @param costOutput
+     */
+    public static void registerOutput(CostOutput costOutput) {
+        defaultOutputList.add(costOutput);
+    }
+
+    /**
+     * 获取默认的输出规则
+     *
+     * @return
+     */
+    public static Set<CostOutput> getDefaultOutputList() {
+        return defaultOutputList;
+    }
+
+    public static ITraceRecoder startTrace(String name) {
+        return startTrace(name, true);
+    }
+
+    public static ITraceRecoder startTrace(String name, boolean logEnable) {
+        return startTrace(AsyncUtil.executorService, name, logEnable);
     }
 
     /**
@@ -35,8 +62,8 @@ public class TraceWatch {
      * @param name            任务名
      * @return
      */
-    public static ITraceRecoder startTrace(ExecutorService executorService, String name, Supplier<Boolean> condition) {
-        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name, condition).setEndHook(TraceWatch::endTrace);
+    public static ITraceRecoder startTrace(ExecutorService executorService, String name, boolean logEnable) {
+        DefaultTraceRecoder bridge = new DefaultTraceRecoder(executorService, name, logEnable).setEndHook(TraceWatch::endTrace);
         THREAD_LOCAL.set(bridge);
         return bridge;
     }

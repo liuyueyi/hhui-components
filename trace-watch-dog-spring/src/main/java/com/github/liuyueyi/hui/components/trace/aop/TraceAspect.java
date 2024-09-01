@@ -69,30 +69,30 @@ public class TraceAspect implements ApplicationContextAware {
     }
 
 
-    private Supplier<Boolean> buildLogCondition(ProceedingJoinPoint joinPoint, TraceDog dog) {
+    private Boolean buildLogCondition(ProceedingJoinPoint joinPoint, TraceDog dog) {
         if (!dog.logEnable()) {
-            return () -> false;
+            return false;
         }
 
-        if (StringUtils.isEmpty(dog.logSpEL())) {
-            return () -> true;
+        if (dog.logSpEL() == null || dog.logSpEL().isEmpty()) {
+            return true;
         }
 
         StandardEvaluationContext context = new StandardEvaluationContext();
         context.setBeanResolver(new BeanFactoryResolver(applicationContext));
 
-        // 超时，使用自定义的返回策略进行返回
+        // 将请求参数也作为上下文参数
         MethodSignature methodSignature = ((MethodSignature) joinPoint.getSignature());
         String[] parameterNames = methodSignature.getParameterNames();
         Object[] args = joinPoint.getArgs();
         for (int i = 0; i < parameterNames.length; i++) {
             context.setVariable(parameterNames[i], args[i]);
         }
-        return () -> (Boolean) parser.parseExpression(dog.logSpEL()).getValue(context);
+        return (Boolean) parser.parseExpression(dog.logSpEL()).getValue(context);
     }
 
     private String genTraceName(MethodSignature methodSignature, TraceDog traceDog) {
-        if (!StringUtils.isEmpty(traceDog.value())) {
+        if (traceDog.value() == null || traceDog.value().isEmpty()) {
             return traceDog.value();
         }
 
