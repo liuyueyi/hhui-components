@@ -77,6 +77,7 @@ public class DefaultTraceRecoder implements ITraceRecoder {
         this.markExecuteOver = false;
         this.logEnable = logEnable;
         this.output = new ArrayList<>();
+        // 默认加载全局的输出重定向规则
         this.output.addAll(TraceWatch.getDefaultOutputList());
         start(task);
         MdcUtil.setGlobalTraceId(MdcUtil.fetchGlobalMsgIdForTraceRecoder());
