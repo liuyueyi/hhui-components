@@ -5,6 +5,7 @@ import com.github.liuyueyi.hhui.components.trace.TraceWatch;
 import com.github.liuyueyi.hhui.components.trace.async.AsyncUtil;
 import com.github.liuyueyi.hhui.components.trace.mdc.MdcUtil;
 import com.github.liuyueyi.hhui.components.trace.output.CostOutput;
+import com.github.liuyueyi.hhui.components.trace.output.LogOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,7 @@ public class DefaultTraceRecoder implements ITraceRecoder {
      */
     private Runnable endHook;
 
-    private List<CostOutput> output;
+    private List<CostOutput> outputList;
 
     public DefaultTraceRecoder() {
         this(AsyncUtil.executorService, "TraceDog", true);
@@ -76,21 +77,21 @@ public class DefaultTraceRecoder implements ITraceRecoder {
         this.executorService = TtlExecutors.getTtlExecutorService(executorService);
         this.markExecuteOver = false;
         this.logEnable = logEnable;
-        this.output = new ArrayList<>();
+        this.outputList = new ArrayList<>();
         // 默认加载全局的输出重定向规则
-        this.output.addAll(TraceWatch.getDefaultOutputList());
-        start(task);
+        this.outputList.addAll(TraceWatch.getGlobalOutputStrategy());
         MdcUtil.setGlobalTraceId(MdcUtil.fetchGlobalMsgIdForTraceRecoder());
+        start(task);
     }
 
     /**
-     * 新增一个耗时定向
+     * 新增一个耗时重定向
      *
      * @param costOutput
      * @return
      */
     public DefaultTraceRecoder addOutput(CostOutput costOutput) {
-        output.add(costOutput);
+        outputList.add(costOutput);
         return this;
     }
 
@@ -236,12 +237,13 @@ public class DefaultTraceRecoder implements ITraceRecoder {
             this.allExecuted();
         }
 
-        if (!logEnable) {
-            return cost;
-        }
-
         // 根据自定义规则，对耗时输出进行处理
-        output.forEach(o -> o.output(cost, traceName));
+        outputList.forEach(o -> {
+            if (!logEnable && o == LogOutput.defaultLogOutput) {
+                return;
+            }
+            o.output(cost, traceName);
+        });
         return cost;
     }
 

@@ -37,6 +37,7 @@ public class MdcUtil {
 
     /**
      * 注册traceId生成规则
+     * 说明: 对于已经有自己的一套全链路的监控的场景，需要在这里进行替换
      *
      * @param gen
      */
@@ -128,7 +129,6 @@ public class MdcUtil {
      * @return traceId
      */
     public static String defaultGenGlobalTraceId() {
-        // fixme: 对于已经有自己的一套全链路的监控的场景，需要在这里进行替换
         return UUID.randomUUID().toString().replace("-", "");
     }
 }

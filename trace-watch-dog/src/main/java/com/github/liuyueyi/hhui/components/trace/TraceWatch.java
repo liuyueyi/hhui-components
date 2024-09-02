@@ -22,29 +22,32 @@ public class TraceWatch {
 
     private static final TransmittableThreadLocal<ITraceRecoder> THREAD_LOCAL = new TransmittableThreadLocal<>();
 
-    private static Set<CostOutput> defaultOutputList;
+    /**
+     * 全局的重定向策略
+     */
+    private static Set<CostOutput> globalOutputStrategy;
 
     static {
-        defaultOutputList = new HashSet<>();
-        defaultOutputList.add(LogOutput::logPrint);
+        globalOutputStrategy = new HashSet<>();
+        globalOutputStrategy.add(LogOutput.defaultLogOutput);
     }
 
     /**
-     * 注册全局的输出
+     * 注册全局的输出重定向规则
      *
      * @param costOutput
      */
     public static void registerOutput(CostOutput costOutput) {
-        defaultOutputList.add(costOutput);
+        globalOutputStrategy.add(costOutput);
     }
 
     /**
-     * 获取默认的输出规则
+     * 获取默认的全局输出重定向策略
      *
      * @return
      */
-    public static Set<CostOutput> getDefaultOutputList() {
-        return defaultOutputList;
+    public static Set<CostOutput> getGlobalOutputStrategy() {
+        return globalOutputStrategy;
     }
 
     public static ITraceRecoder startTrace(String name) {

@@ -17,6 +17,8 @@ import java.util.Map;
 public class LogOutput {
     private static final Logger log = LoggerFactory.getLogger(DefaultTraceRecoder.class);
 
+    public static final CostOutput defaultLogOutput = LogOutput::logPrint;
+
     /**
      * 输出日志
      *
